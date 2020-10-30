@@ -1,0 +1,52 @@
+version: 2
+
+branch_filters: &branch_filters
+  filters:
+    branches:
+      only:
+        - master
+
+jobs:
+  build_android:
+    docker:
+      - image: cirrusci/flutter:v1.12.13-hotfix.8
+
+    steps:
+      - add_ssh_keys:
+          fingerprints:
+            - "XX:XX:XX"
+      - run:
+          name: Run Flutter doctor
+          command: flutter doctor
+      - checkout:
+          path: app
+      - run:
+          name: Run tests
+          command: cd app && flutter test
+      - run:
+          name: Build the Android version
+          command: cd app && flutter build apk --build-number=$CIRCLE_BUILD_NUM
+      - run:
+          name: Set Ruby version
+          command: echo 'chruby ruby-2.6' >> ~/.bash_profile
+      - run:
+          name: Install Bundler
+          command: sudo gem install bundler
+      - run:
+          name: Install Ruby
+          command: cd app/android && sudo bundle install
+      - run:
+          name: Install Firebase CLI
+          command: curl -sL https://firebase.tools | bash
+      - run:
+          name: Run Fastlane
+          command: cd app/android && sudo bundle exec fastlane upload_firebase
+      - store_artifacts:
+          path: app/build/app/outputs/apk/release/app-release.apk
+
+workflows:
+  version: 2
+  build:
+    jobs:
+      - build_android:
+          <<: *branch_filters
